@@ -1,0 +1,4 @@
+max_connections = 1000
+request_max_size = 8096
+PHPPath = /var/php
+webPath = /var/www/html2
