@@ -17,6 +17,9 @@ struct Config {
     std::string PHPPath;
     std::string webPath;
 
+    // default file name
+    // error file name
+
     explicit Config(const std::string &file);
 private:
     void loadConfig(const std::string & name, const std::string &value);
