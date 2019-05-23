@@ -7,7 +7,7 @@ Server::Server(std::atomic_bool &running) : running{running} {
 
     if (pthread_attr_init(&connection_attr))
         throw std::runtime_error("can't init pthread attr");
-    if (sigaddset(&sigset, 1) || sigaddset(&sigset,2) || sigprocmask(SIG_UNBLOCK, &sigset, NULL))
+    if (sigaddset(&sigset, 1) || sigaddset(&sigset,2) || sigprocmask(SIG_UNBLOCK, &sigset, nullptr))
         throw std::runtime_error("can't set signal set");
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -19,16 +19,16 @@ Server::Server(std::atomic_bool &running) : running{running} {
     server_addr.ai_socktype = SOCK_STREAM;
     server_addr.ai_flags = AI_PASSIVE;
     server_addr.ai_protocol = 0;
-    server_addr.ai_canonname = NULL;
-    server_addr.ai_addr = NULL;
-    server_addr.ai_next = NULL;
+    server_addr.ai_canonname = nullptr;
+    server_addr.ai_addr = nullptr;
+    server_addr.ai_next = nullptr;
 
     addrinfo *result, *rp;
-    int s = getaddrinfo(NULL, config->port.c_str(), &server_addr, &result);
+    int s = getaddrinfo(nullptr, config->port.c_str(), &server_addr, &result);
     if (s != 0)
         throw std::runtime_error(std::string("getaddrinfo: ")+gai_strerror(s));
 
-    for (rp = result;rp != NULL;rp = rp->ai_next) {
+    for (rp = result;rp != nullptr;rp = rp->ai_next) {
         server_socket = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (server_socket == -1)
             continue;
@@ -141,6 +141,9 @@ void * Server::connection_thread(void * param) {
         if (sent_size == -1)
             std::cout << strerror(errno) << std::endl;
 
+        shutdown(connectionHandler->socket,SHUT_RDWR);
+        close(connectionHandler->socket);
+
         if (pthread_mutex_lock(&srv->free_connection_handlers_lock))
             throw std::runtime_error("can't lock mutex");
         srv->free_connection_handlers.push(connectionHandler);
@@ -166,7 +169,7 @@ void * Server::connection_thread(void * param) {
 
 void * Server::server(void *param) {
     auto srv = (Server *) param;
-    std::cout << "running" << std::endl;
+    std::cout << "running HTTP server + php on: " << srv->config->port << std::endl;
     while (srv->running) {
         sockaddr socket_addr;
         socklen_t size = sizeof(socket_addr);

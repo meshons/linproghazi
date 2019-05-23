@@ -2,23 +2,74 @@
 
 Response Request::handle(const std::shared_ptr<ConnectionHandler> & ch) {
     const char * CRLF = "\r\n";
+    Request request{ch};
 
     try {
-        Request request{ch};
-        std::stringstream requestText(ch->msg);
+        std::string str{ch->msg};
+        str.erase(std::remove(str.begin(), str.end(), '\r'), str.end());
+        std::stringstream requestText{str};
+
         std::string line;
 
         getline(requestText, line);
         request.extractRequestLine(line);
 
         if (!request.simple)
-            request.extractHeader(requestText);//tovabbi dolgok
+            request.extractHeader(requestText);
 
-        //make respone message
-
+        request.extractPostBody(requestText);
     } catch (const HTTP::HTTPException & exception) {
-        std::cout << exception.what() << std::endl;
+        std::cout << exception.getMsg() << exception.getCode() << std::endl;
+        //return request.errorResponse(exception);
     }
+
+    if (request.url.find(':') != std::string::npos) {
+        request.url = request.url.substr(request.url.find(':')+1);
+    }
+
+    if (request.url.find('?') != std::string::npos) {
+        std::stringstream getstr{request.url};
+        std::string tmp;
+        std::getline(getstr, tmp, '?');
+        std::getline(getstr, request.get);
+    }
+
+    bool onlyHost = false;
+    std::string tmpUrl = request.url;
+    std::stringstream urlsplitter{request.url};
+    if (tmpUrl.find('/') != std::string::npos) {
+        std::string tmp;
+        std::getline(urlsplitter, tmp, '/');
+    } else
+        onlyHost = true;
+
+    if (tmpUrl.find(';') != std::string::npos)
+        std::getline(urlsplitter, tmpUrl, ';');
+    else if (tmpUrl.find('?') != std::string::npos)
+        std::getline(urlsplitter, tmpUrl, '?');
+    else
+        std::getline(urlsplitter, tmpUrl);
+
+    if (onlyHost)
+        tmpUrl = ch->cfg->defaultFileName;
+
+    if (tmpUrl.back() == '/')
+        tmpUrl += ch->cfg->defaultFileName;
+
+    if (tmpUrl.empty())
+        tmpUrl += '/' + ch->cfg->defaultFileName;
+
+    if (tmpUrl.front() != '/')
+        tmpUrl = '/' + tmpUrl;
+
+    request.url = ch->cfg->webPath + tmpUrl;
+
+    std::cout << request.url << std::endl;
+
+    // TODO test url is right
+
+    request.createResponse();
+
     Response response;
     std::stringstream message;
     message << "HTTP/1.0 ";
@@ -97,5 +148,24 @@ void Request::extractHeader(std::stringstream &request) {
             getline(liness, ccname);
             contentCoding = HTTP::contentCodingDetection(ccname);
         }
+        std::getline(request, line);
     }
+}
+
+void Request::extractPostBody(std::stringstream & request) {
+    std::string line;
+    std::getline(request, line);
+    while (!request.eof() && line.empty())
+        std::getline(request, line);
+    if (!line.empty())
+        post = line;
+}
+
+Response Request::createResponse() const {
+
+    return Response();
+}
+
+Response Request::errorResponse(const HTTP::HTTPException &) const {
+    return Response();
 }

@@ -14,7 +14,7 @@ namespace HTTP{
 
         const char * what() const noexcept
         {
-            return std::string("HTTP Exception "+code+": "+msg).c_str();
+            return (std::string("HTTP Exception ")+code+msg).c_str();
         }
 
         bool displayable() const {

@@ -1,0 +1,8 @@
+PHPPath = php
+webPath = /var/www/html2/
+defaultFileName = index.html
+errorfileName = error.php
+mimeTypesPath = /etc/mime.types
+maxConnections = 1000
+requestMaxSize = 8096
+port = 80
