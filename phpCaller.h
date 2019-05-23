@@ -1,0 +1,10 @@
+#ifndef LINPROGHAZI_PHPCALLER_H
+#define LINPROGHAZI_PHPCALLER_H
+
+
+class phpCaller {
+
+};
+
+
+#endif //LINPROGHAZI_PHPCALLER_H

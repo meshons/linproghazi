@@ -22,6 +22,7 @@
 #include "request.h"
 #include "response.h"
 #include "connectionhandler.h"
+#include "mime.h"
 
 class Server {
     std::atomic_bool &running;
@@ -38,6 +39,7 @@ class Server {
     sigset_t sigset;
     int server_socket;
     addrinfo server_addr;
+    mime mimeTypeHandler;
 public:
     explicit Server(std::atomic_bool & running);
     void run();

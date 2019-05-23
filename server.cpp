@@ -3,6 +3,8 @@
 Server::Server(std::atomic_bool &running) : running{running} {
     config = std::make_shared<Config>(std::string{"config.txt"});
 
+    mimeTypeHandler = mime(config->mimeTypesPath);
+
     if (pthread_attr_init(&connection_attr))
         throw std::runtime_error("can't init pthread attr");
     if (sigaddset(&sigset, 1) || sigaddset(&sigset,2) || sigprocmask(SIG_UNBLOCK, &sigset, NULL))
@@ -22,7 +24,7 @@ Server::Server(std::atomic_bool &running) : running{running} {
     server_addr.ai_next = NULL;
 
     addrinfo *result, *rp;
-    int s = getaddrinfo(NULL, "80", &server_addr, &result);
+    int s = getaddrinfo(NULL, config->port.c_str(), &server_addr, &result);
     if (s != 0)
         throw std::runtime_error(std::string("getaddrinfo: ")+gai_strerror(s));
 

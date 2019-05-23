@@ -23,12 +23,20 @@ Config::Config(const std::string &file) {
 }
 
 void Config::loadConfig(const std::string & name, const std::string &value) {
-    if (name == "max_connections")
+    if (name == "maxConnections")
         maxConnections = std::stoi(value);
-    else if (name == "request_max_size")
+    else if (name == "requestMaxSize")
         requestMaxSize = std::stoi(value);
     else if (name == "PHPPath")
         PHPPath = value;
     else if (name == "webPath")
         webPath = value;
+    else if (name == "errorFileName")
+        errorFileName = value;
+    else if (name == "mimeTypesPath")
+        mimeTypesPath = value;
+    else if (name == "defaultFileName")
+        defaultFileName = value;
+    else if (name == "port")
+        port = value;
 }

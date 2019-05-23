@@ -16,10 +16,10 @@ struct Config {
     size_t requestMaxSize;
     std::string PHPPath;
     std::string webPath;
-
-    // default file name
-    // error file name
-
+    std::string defaultFileName;
+    std::string errorFileName;
+    std::string mimeTypesPath;
+    std::string port = "80";
     explicit Config(const std::string &file);
 private:
     void loadConfig(const std::string & name, const std::string &value);

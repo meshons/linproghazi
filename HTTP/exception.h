@@ -12,9 +12,13 @@ namespace HTTP{
     public:
         HTTPException(std::string &&code, std::string &&msg): code{code}, msg{msg} {}
 
-        const char * what () const throw ()
+        const char * what() const noexcept
         {
             return std::string("HTTP Exception "+code+": "+msg).c_str();
+        }
+
+        bool displayable() const {
+            return true;
         }
 
         const std::string & getCode() const {
