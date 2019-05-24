@@ -4,10 +4,11 @@ Server::Server(std::atomic_bool &running) : running{running} {
     config = std::make_shared<Config>(std::string{"config.txt"});
 
     mimeTypeHandler = mime(config->mimeTypesPath);
+    config->mimeHandler = mimeTypeHandler;
 
     if (pthread_attr_init(&connection_attr))
         throw std::runtime_error("can't init pthread attr");
-    if (sigaddset(&sigset, 1) || sigaddset(&sigset,2) || sigprocmask(SIG_UNBLOCK, &sigset, nullptr))
+    if (sigaddset(&sigset, SIGUSR1) || sigaddset(&sigset, SIGUSR2) || sigprocmask(SIG_UNBLOCK, &sigset, nullptr))
         throw std::runtime_error("can't set signal set");
     server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -69,6 +70,9 @@ Server::Server(std::atomic_bool &running) : running{running} {
 }
 
 void Server::run() {
+    sigemptyset(&sigset);
+    if (sigaddset(&sigset, SIGUSR1) || sigaddset(&sigset, SIGUSR2) || sigprocmask(SIG_UNBLOCK, &sigset, nullptr))
+        throw std::runtime_error("can't set signal set");
     if(pthread_create(&server_thread, &connection_attr, server, (void *) this))
         throw std::runtime_error("can't create server thread");
 }
@@ -107,11 +111,17 @@ void Server::join() {
 
 void * Server::connection_thread(void * param) {
     auto srv = (Server *) param;
+
+    if (sigprocmask(SIG_BLOCK, &srv->sigset, nullptr))
+        throw std::runtime_error("can't set signal set");
+
     while (srv->running) {
         siginfo_t signal;
         if (sigwaitinfo(&srv->sigset, &signal) == -1)
             continue;
-        if (signal.si_signo == 2) return nullptr;
+        std::cout << signal.si_signo << std::endl;
+        if (signal.si_signo == SIGUSR2) return nullptr;
+        if (signal.si_signo != SIGUSR1) continue;
 
         auto connectionHandler = *(std::shared_ptr<ConnectionHandler> *)signal.si_value.sival_ptr;
 
@@ -209,7 +219,7 @@ void * Server::server(void *param) {
         sigval sv;
         sv.sival_ptr = &ch;
 
-        if (pthread_sigqueue(thread, 1, sv))
+        if (pthread_sigqueue(thread, SIGUSR1, sv))
             throw std::runtime_error("error on sending signal to connection thread");
     }
     return nullptr;

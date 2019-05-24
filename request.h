@@ -15,7 +15,6 @@ public:
     static Response handle(const std::shared_ptr<ConnectionHandler> &);
 private:
     std::shared_ptr<ConnectionHandler> ch;
-    Response response;
     HTTP::method method;
     std::string url;
     bool simple;
@@ -36,6 +35,8 @@ private:
     void extractRequestLine(const std::string &);
     void extractHeader(std::stringstream &);
     void extractPostBody(std::stringstream &);
+
+    void extractUrl();
 };
 
 #endif //LINPROGHAZI_REQUEST_H

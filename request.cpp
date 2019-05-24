@@ -1,4 +1,5 @@
 #include "request.h"
+#include "phpCaller.h"
 
 Response Request::handle(const std::shared_ptr<ConnectionHandler> & ch) {
     const char * CRLF = "\r\n";
@@ -12,93 +13,30 @@ Response Request::handle(const std::shared_ptr<ConnectionHandler> & ch) {
         std::string line;
 
         getline(requestText, line);
+        if (line.empty()) {
+            Response rsp;
+            rsp.msg = "";
+            return rsp;
+        }
         request.extractRequestLine(line);
 
         if (!request.simple)
             request.extractHeader(requestText);
 
         request.extractPostBody(requestText);
+
+        request.extractUrl();
+
+        return request.createResponse();
     } catch (const HTTP::HTTPException & exception) {
-        std::cout << exception.getMsg() << exception.getCode() << std::endl;
-        //return request.errorResponse(exception);
+        return request.errorResponse(exception);
     }
-
-    if (request.url.find(':') != std::string::npos) {
-        request.url = request.url.substr(request.url.find(':')+1);
-    }
-
-    if (request.url.find('?') != std::string::npos) {
-        std::stringstream getstr{request.url};
-        std::string tmp;
-        std::getline(getstr, tmp, '?');
-        std::getline(getstr, request.get);
-    }
-
-    bool onlyHost = false;
-    std::string tmpUrl = request.url;
-    std::stringstream urlsplitter{request.url};
-    if (tmpUrl.find('/') != std::string::npos) {
-        std::string tmp;
-        std::getline(urlsplitter, tmp, '/');
-    } else
-        onlyHost = true;
-
-    if (tmpUrl.find(';') != std::string::npos)
-        std::getline(urlsplitter, tmpUrl, ';');
-    else if (tmpUrl.find('?') != std::string::npos)
-        std::getline(urlsplitter, tmpUrl, '?');
-    else
-        std::getline(urlsplitter, tmpUrl);
-
-    if (onlyHost)
-        tmpUrl = ch->cfg->defaultFileName;
-
-    if (tmpUrl.back() == '/')
-        tmpUrl += ch->cfg->defaultFileName;
-
-    if (tmpUrl.empty())
-        tmpUrl += '/' + ch->cfg->defaultFileName;
-
-    if (tmpUrl.front() != '/')
-        tmpUrl = '/' + tmpUrl;
-
-    request.url = ch->cfg->webPath + tmpUrl;
-
-    std::cout << request.url << std::endl;
-
-    // TODO test url is right
-
-    request.createResponse();
-
-    Response response;
-    std::stringstream message;
-    message << "HTTP/1.0 ";
-    // response code and message
-    message << CRLF;
-    std::time_t t = std::time(nullptr);
-    std::tm tm = *std::gmtime(&t);
-    message << "Date: " << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z") << CRLF;
-    message << "Server: linproghazi" << CRLF;
-    message << CRLF;
-    //message content
-
-    response.msg = std::string("HTTP/1.0 200 OK\n"
-                               "Date: Fri, 17 May 2019 08:39:36 GMT\n"
-                               "Server: Apache\n"
-                               "Last-Modified: Wed, 16 Jan 2019 12:59:18 GMT\n"
-                               "Vary: Accept-Encoding\n"
-                               "Content-Length: 11\n"
-                               "Content-Type: text/html\n\n"
-                               "Hello world");
-
-    return response;
 }
 
 void Request::extractRequestLine(const std::string & requestLine) {
     std::istringstream iss(requestLine);
     std::vector<std::string> words(std::istream_iterator<std::string>{iss},
                                      std::istream_iterator<std::string>());
-
     if (words.size() < 2 || words.size() > 3)
         throw HTTP::HTTPException("400", "Request line parameter list not correct");
 
@@ -162,10 +100,127 @@ void Request::extractPostBody(std::stringstream & request) {
 }
 
 Response Request::createResponse() const {
+    std::string CRLF = "\r\n";
 
-    return Response();
+    std::string extension;
+    std::stringstream filenameExtractor{url};
+    while (!filenameExtractor.eof())
+        std::getline(filenameExtractor, extension, '/');
+    std::stringstream extensionExtractor{extension};
+    std::string tmp;
+    std::getline(extensionExtractor, tmp, '.');
+    std::getline(extensionExtractor, extension);
+
+    std::string fileContent;
+
+    std::ifstream in(url);
+    if (!in.good())
+        throw HTTP::HTTPException("404", "File not exists.");
+
+    if (extension == "php") {
+        in.close();
+        phpCaller php{get, post, ch->cfg, url};
+        fileContent = php.response();
+    } else {
+        fileContent = std::string(static_cast<std::stringstream const&>(std::stringstream() << in.rdbuf()).str());
+    }
+    in.close();
+
+    Response response;
+
+    std::stringstream message;
+
+    message << "HTTP/1.0 200 okesBro" << CRLF;
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::gmtime(&t);
+    message << "Date: " << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z") << CRLF;
+    message << "Server: linproghazi" << CRLF;
+    message << "Content-Type: " << ch->cfg->mimeHandler.getMime(extension) << CRLF;
+    message << "Content-Length: " << fileContent.length() << CRLF;
+
+    message << CRLF;
+
+    if (method!=HTTP::method::HEAD) {
+        message << fileContent;
+    }
+
+    response.msg = message.str();
+
+    return response;
 }
 
-Response Request::errorResponse(const HTTP::HTTPException &) const {
-    return Response();
+Response Request::errorResponse(const HTTP::HTTPException &e) const {
+    Response response;
+    std::string CRLF = "\r\n";
+    std::stringstream message;
+    std::string fileContent, errorFile = ch->cfg->webPath+ch->cfg->errorFileName;
+
+    std::ifstream in(errorFile);
+    if (!in.good())
+        std::cout << "No error file" << std::endl;
+
+    in.close();
+
+    std::string errorPost;
+    errorPost+="code="+e.getCode()+"&msg="+e.getMsg();
+
+    phpCaller php{"", errorPost, ch->cfg, errorFile};
+    fileContent = php.response();
+
+    message << "HTTP/1.0 " << e.getCode() << " nemOkesBro" << CRLF;
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::gmtime(&t);
+    message << "Date: " << std::put_time(&tm, "%a, %d %b %Y %H:%M:%S %Z") << CRLF;
+    message << "Server: linproghazi" << CRLF;
+    message << "Content-Type: " << ch->cfg->mimeHandler.getMime("php") << CRLF;
+    message << "Content-Length: " << fileContent.length() << CRLF;
+
+    message << CRLF;
+
+    if (method!=HTTP::method::HEAD) {
+        message << fileContent;
+    }
+
+    response.msg = message.str();
+    return response;
+}
+
+void Request::extractUrl() {
+    if (url.find(':') != std::string::npos) {
+        url = url.substr(url.find(':')+1);
+    }
+
+    if (url.find('?') != std::string::npos) {
+        std::stringstream getstr{url};
+        std::string tmp;
+        std::getline(getstr, tmp, '?');
+        std::getline(getstr, get);
+    }
+
+    bool onlyHost = false;
+    std::string tmpUrl = url;
+    std::stringstream urlsplitter{url};
+    if (tmpUrl.find('/') != std::string::npos) {
+        std::string tmp;
+        std::getline(urlsplitter, tmp, '/');
+    } else
+        onlyHost = true;
+
+    if (tmpUrl.find(';') != std::string::npos)
+        std::getline(urlsplitter, tmpUrl, ';');
+    else if (tmpUrl.find('?') != std::string::npos)
+        std::getline(urlsplitter, tmpUrl, '?');
+    else
+        std::getline(urlsplitter, tmpUrl);
+
+    if (onlyHost)
+        tmpUrl = ch->cfg->defaultFileName;
+
+    if (tmpUrl.back() == '/')
+        tmpUrl += ch->cfg->defaultFileName;
+
+    if (tmpUrl.empty())
+        tmpUrl += '/' + ch->cfg->defaultFileName;
+
+    url = ch->cfg->webPath + tmpUrl;
 }

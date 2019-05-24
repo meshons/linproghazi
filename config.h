@@ -10,6 +10,7 @@
 #include <sstream>
 #include <vector>
 #include <iterator>
+#include "mime.h"
 
 struct Config {
     int maxConnections;
@@ -20,6 +21,7 @@ struct Config {
     std::string errorFileName;
     std::string mimeTypesPath;
     std::string port = "80";
+    mime mimeHandler;
     explicit Config(const std::string &file);
 private:
     void loadConfig(const std::string & name, const std::string &value);

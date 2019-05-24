@@ -1,6 +1,6 @@
 PHPPath = php
 webPath = /var/www/html2/
-defaultFileName = index.html
+defaultFileName = index.php
 errorfileName = error.php
 mimeTypesPath = /etc/mime.types
 maxConnections = 1000
