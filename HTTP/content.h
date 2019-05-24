@@ -6,13 +6,21 @@
 #include "exception.h"
 
 namespace HTTP{
+    /**
+     * Az állományok kódolásáért felelős enum
+     */
     enum contentCoding {
         gzip,
         compress,
         none
     };
 
-    contentCoding contentCodingDetection(std::string methodname);
+    /**
+     * Adott nevű kódolásra visszaadja a contentCoding enum megfelelőjét
+     * @param contentCodingName a kódolás neve
+     * @return az enum-ban vett megfelelője a kódolásnak
+     */
+    contentCoding contentCodingDetection(std::string contentCodingName);
 }
 
 #endif //LINPROGHAZI_CONTENT_H

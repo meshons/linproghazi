@@ -119,7 +119,6 @@ void * Server::connection_thread(void * param) {
         siginfo_t signal;
         if (sigwaitinfo(&srv->sigset, &signal) == -1)
             continue;
-        std::cout << signal.si_signo << std::endl;
         if (signal.si_signo == SIGUSR2) return nullptr;
         if (signal.si_signo != SIGUSR1) continue;
 

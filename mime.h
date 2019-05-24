@@ -5,10 +5,20 @@
 #include <fstream>
 #include <string>
 
+/**
+ * A MIME típusneveket tároló osztály
+ */
 class mime {
-    std::map<std::string, std::string> mimeTypes;
+    std::map<std::string, std::string> mimeTypes; /// adott fájlkiterjesztéshez tartozó MIME-k
 public:
+    /**
+     * default Konstruktor, nem csinál semmit
+     */
     mime() {}
+    /**
+     * A megadott fájlból betölti a MIME-ket
+     * @param filename a MIME-ket tartalmazó fájl
+     */
     explicit mime(const std::string & filename) {
         std::ifstream file(filename);
         std::string line;
@@ -25,6 +35,12 @@ public:
         }
     }
 
+    /**
+     * Adott kiterjesztésnek visszaadja a MIME típusát,
+     * vagy ha nem létezik akkor az application/octet-stream típust
+     * @param extension a kiterjesztés neve
+     * @return a kiterjesztés MIME típusa
+     */
     std::string getMime(const std::string & extension) const {
         if (extension == "php")
             return (mimeTypes.find("html") != mimeTypes.end())

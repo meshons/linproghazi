@@ -2,6 +2,10 @@
 #include <atomic>
 #include "server.h"
 
+/**
+ * A webszerver fő programja, kezeli a parancsokat és elindítja a webszervert
+ * @return a program sikerességét jelző szám
+ */
 int main() {
     try {
         std::atomic_bool running = true;
